@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TCG buy / sell tracker</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f3ef;
+    color: #2c2c2a;
+    margin: 0;
+    padding: 24px;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e5e3dc;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: #e6f1fb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .title { font-weight: 600; font-size: 18px; margin: 0; }
+  .subtitle { font-size: 13px; color: #888780; margin: 2px 0 0; }
+  button {
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #d3d1c7;
+    background: #ffffff;
+    cursor: pointer;
+    color: #2c2c2a;
+  }
+  button:hover { background: #f1efe8; }
+  input[type="text"], select {
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d3d1c7;
+    background: #ffffff;
+    color: #2c2c2a;
+  }
+  #emptyState {
+    text-align: center;
+    padding: 48px 16px;
+    color: #888780;
+    font-size: 14px;
+    border: 1px dashed #d3d1c7;
+    border-radius: 12px;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .summary-card {
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .summary-card p.label {
+    font-size: 13px;
+    margin: 0 0 4px;
+  }
+  .summary-card p.value {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .c-amber { background: #faeeda; }
+  .c-amber .label { color: #854f0b; }
+  .c-amber .value { color: #412402; }
+
+  .c-coral { background: #faece7; }
+  .c-coral .label { color: #993c1d; }
+  .c-coral .value { color: #4a1b0c; }
+
+  .c-blue { background: #e6f1fb; }
+  .c-blue .label { color: #185fa5; }
+  .c-blue .value { color: #042c53; }
+
+  .c-teal { background: #e1f5ee; }
+  .c-teal .label { color: #0f6e56; }
+  .c-teal .value { color: #04342c; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .controls input[type="text"] { flex: 1; min-width: 140px; }
+  .controls select { width: 160px; }
+
+  .section-title {
+    font-weight: 600;
+    font-size: 15px;
+    margin: 24px 0 8px;
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: collapse;
+    min-width: 560px;
+  }
+  th, td {
+    padding: 8px 10px;
+    text-align: left;
+  }
+  thead tr {
+    border-bottom: 1px solid #d3d1c7;
+  }
+  th { cursor: pointer; user-select: none; white-space: nowrap; }
+  th:hover { color: #185fa5; }
+  tbody tr { border-bottom: 1px solid #efeee8; }
+  tbody tr:hover { background: #f9f8f5; }
+  td.right, th.right { text-align: right; }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .badge-default { background: #f1efe8; color: #5f5e5a; }
+  .badge-grading { background: #faeeda; color: #854f0b; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="icon-box">🃏</div>
+      <div>
+        <p class="title">TCG buy / sell tracker</p>
+        <p class="subtitle">Live data from Google Sheets (auto-refresh)</p>
+      </div>
+    </div>
+    <div>
+      <input type="file" id="fileInput" accept=".csv" style="display:none;" />
+      <button id="uploadBtn">Upload CSV</button>
+    </div>
+  </div>
+
+  <div id="emptyState">
+    No file loaded yet. Upload your CSV to see the summary.
+  </div>
+
+  <div id="results" style="display:none;">
+
+    <div class="summary-grid">
+      <div class="summary-card c-amber">
+        <p class="label">Total cost of buying - KJ</p>
+        <p class="value" id="buyKJ">$0</p>
+      </div>
+      <div class="summary-card c-amber">
+        <p class="label">Total cost of buying - LCKJ</p>
+        <p class="value" id="buyLCKJ">$0</p>
+      </div>
+      <div class="summary-card c-coral">
+        <p class="label">Total cost of grading - KJ</p>
+        <p class="value" id="gradeKJ">$0</p>
+      </div>
+      <div class="summary-card c-coral">
+        <p class="label">Total cost of grading - LCKJ</p>
+        <p class="value" id="gradeLCKJ">$0</p>
+      </div>
+      <div class="summary-card c-blue">
+        <p class="label">Total sold - KJ</p>
+        <p class="value" id="soldKJ">$0</p>
+      </div>
+      <div class="summary-card c-blue">
+        <p class="label">Total sold - LCKJ</p>
+        <p class="value" id="soldLCKJ">$0</p>
+      </div>
+      <div class="summary-card c-teal">
+        <p class="label">Total profit - KJ</p>
+        <p class="value" id="profitKJ">$0</p>
+      </div>
+      <div class="summary-card c-teal">
+        <p class="label">Total profit - LCKJ</p>
+        <p class="value" id="profitLCKJ">$0</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input type="text" id="searchBoxBuy" placeholder="Search items bought..." />
+      <select id="gameFilter">
+        <option value="all">All games</option>
+      </select>
+    </div>
+
+    <p class="section-title">Items bought</p>
+    <div class="table-wrap">
+      <table id="buyTable">
+        <thead>
+          <tr>
+            <th data-key="game" data-table="buy">Game</th>
+            <th data-key="item" data-table="buy">Item/card</th>
+            <th class="right" data-key="qty" data-table="buy">Qty</th>
+            <th class="right" data-key="totalCost" data-table="buy">Total cost</th>
+            <th class="right" data-key="kjPercent" data-table="buy">KJ %</th>
+            <th class="right" data-key="lckjPercent" data-table="buy">LCKJ %</th>
+            <th class="right" data-key="kjShare" data-table="buy">KJ share</th>
+            <th class="right" data-key="lckjShare" data-table="buy">LCKJ share</th>
+          </tr>
+        </thead>
+        <tbody id="buyTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="controls">
+      <input type="text" id="searchBoxSell" placeholder="Search items sold..." />
+    </div>
+
+    <p class="section-title">Items sold</p>
+    <div class="table-wrap">
+      <table id="sellTable">
+        <thead>
+          <tr>
+            <th data-key="item" data-table="sell">Item/card</th>
+            <th class="right" data-key="qty" data-table="sell">Qty</th>
+            <th class="right" data-key="totalSold" data-table="sell">Total sold</th>
+            <th class="right" data-key="kjPercent" data-table="sell">KJ %</th>
+            <th class="right" data-key="lckjPercent" data-table="sell">LCKJ %</th>
+            <th class="right" data-key="kjShare" data-table="sell">KJ share</th>
+            <th class="right" data-key="lckjShare" data-table="sell">LCKJ share</th>
+          </tr>
+        </thead>
+        <tbody id="sellTableBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+let buyRows = [];
+let sellRows = [];
+let sortState = { buy: { key: null, asc: true }, sell: { key: null, asc: true } };
+
+function fmtCurrency(v) {
+  if (isNaN(v)) return '$0';
+  const sign = v < 0 ? '-' : '';
+  return sign + '$' + Math.abs(v).toLocaleString(undefined, {maximumFractionDigits: 2});
+}
+function num(v) {
+  if (v === undefined || v === null || v === '') return 0;
+  const cleaned = String(v).replace(/%/g, '').replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseCsv(text) {
+  const result = Papa.parse(text, { skipEmptyLines: false });
+  const data = result.data;
+
+  buyRows = [];
+  sellRows = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length === 0) continue;
+
+    const game = (row[0] || '').trim();
+    const buyItem = (row[1] || '').trim();
+    const buyQty = row[2];
+    const buyTotalCost = row[3];
+    const buyKjPct = row[4];
+    const buyLckjPct = row[5];
+    const buyKjShare = row[6];
+    const buyLckjShare = row[7];
+
+    if (buyItem !== '' || num(buyTotalCost) !== 0 || num(buyKjShare) !== 0 || num(buyLckjShare) !== 0) {
+      buyRows.push({
+        game: game,
+        item: buyItem,
+        qty: num(buyQty),
+        totalCost: num(buyTotalCost),
+        kjPercent: num(buyKjPct),
+        lckjPercent: num(buyLckjPct),
+        kjShare: num(buyKjShare),
+        lckjShare: num(buyLckjShare)
+      });
+    }
+
+    const sellItem = (row[9] || '').trim();
+    const sellQty = row[10];
+    const sellTotalSold = row[11];
+    const sellKjPct = row[12];
+    const sellLckjPct = row[13];
+    const sellKjShare = row[14];
+    const sellLckjShare = row[15];
+
+    if (sellItem !== '' || num(sellTotalSold) !== 0 || num(sellKjShare) !== 0 || num(sellLckjShare) !== 0) {
+      sellRows.push({
+        item: sellItem,
+        qty: num(sellQty),
+        totalSold: num(sellTotalSold),
+        kjPercent: num(sellKjPct),
+        lckjPercent: num(sellLckjPct),
+        kjShare: num(sellKjShare),
+        lckjShare: num(sellLckjShare)
+      });
+    }
+  }
+}
+
+function renderSummary() {
+  let buyKJ = 0, buyLCKJ = 0, gradeKJ = 0, gradeLCKJ = 0, soldKJ = 0, soldLCKJ = 0;
+
+  buyRows.forEach(r => {
+    if (r.game.toLowerCase() === 'grading') {
+      gradeKJ += r.kjShare;
+      gradeLCKJ += r.lckjShare;
+    } else {
+      buyKJ += r.kjShare;
+      buyLCKJ += r.lckjShare;
+    }
+  });
+
+  sellRows.forEach(r => {
+    soldKJ += r.kjShare;
+    soldLCKJ += r.lckjShare;
+  });
+
+  const profitKJ = soldKJ - (buyKJ + gradeKJ);
+  const profitLCKJ = soldLCKJ - (buyLCKJ + gradeLCKJ);
+
+  document.getElementById('buyKJ').textContent = fmtCurrency(buyKJ);
+  document.getElementById('buyLCKJ').textContent = fmtCurrency(buyLCKJ);
+  document.getElementById('gradeKJ').textContent = fmtCurrency(gradeKJ);
+  document.getElementById('gradeLCKJ').textContent = fmtCurrency(gradeLCKJ);
+  document.getElementById('soldKJ').textContent = fmtCurrency(soldKJ);
+  document.getElementById('soldLCKJ').textContent = fmtCurrency(soldLCKJ);
+  document.getElementById('profitKJ').textContent = fmtCurrency(profitKJ);
+  document.getElementById('profitLCKJ').textContent = fmtCurrency(profitLCKJ);
+}
+
+function populateGameFilter() {
+  const games = [...new Set(buyRows.map(r => r.game).filter(g => g !== ''))].sort();
+  const select = document.getElementById('gameFilter');
+  select.innerHTML = '<option value="all">All games</option>';
+  games.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g;
+    opt.textContent = g;
+    select.appendChild(opt);
+  });
+}
+
+function renderBuyTable() {
+  const search = document.getElementById('searchBoxBuy').value.toLowerCase();
+  const gameFilter = document.getElementById('gameFilter').value;
+  let filtered = buyRows.filter(r => {
+    const matchesSearch = r.item.toLowerCase().includes(search);
+    const matchesGame = gameFilter === 'all' || r.game === gameFilter;
+    return matchesSearch && matchesGame;
+  });
+
+  const sk = sortState.buy;
+  if (sk.key) {
+    filtered = filtered.slice().sort((a, b) => {
+      let av = a[sk.key], bv = b[sk.key];
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sk.asc ? -1 : 1;
+      if (av > bv) return sk.asc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const tbody = document.getElementById('buyTableBody');
+  tbody.innerHTML = '';
+  filtered.forEach(r => {
+    const tr = document.createElement('tr');
+    const badgeClass = r.game.toLowerCase() === 'grading' ? 'badge-grading' : 'badge-default';
+    tr.innerHTML = `
+      <td><span class="badge ${badgeClass}">${r.game || '-'}</span></td>
+      <td style="font-weight:600;">${r.item}</td>
+      <td class="right">${r.qty}</td>
+      <td class="right">${fmtCurrency(r.totalCost)}</td>
+      <td class="right">${r.kjPercent}%</td>
+      <td class="right">${r.lckjPercent}%</td>
+      <td class="right">${fmtCurrency(r.kjShare)}</td>
+      <td class="right">${fmtCurrency(r.lckjShare)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderSellTable() {
+  const search = document.getElementById('searchBoxSell').value.toLowerCase();
+  let filtered = sellRows.filter(r => r.item.toLowerCase().includes(search));
+
+  const sk = sortState.sell;
+  if (sk.key) {
+    filtered = filtered.slice().sort((a, b) => {
+      let av = a[sk.key], bv = b[sk.key];
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sk.asc ? -1 : 1;
+      if (av > bv) return sk.asc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const tbody = document.getElementById('sellTableBody');
+  tbody.innerHTML = '';
+  filtered.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:600;">${r.item}</td>
+      <td class="right">${r.qty}</td>
+      <td class="right">${fmtCurrency(r.totalSold)}</td>
+      <td class="right">${r.kjPercent}%</td>
+      <td class="right">${r.lckjPercent}%</td>
+      <td class="right">${fmtCurrency(r.kjShare)}</td>
+      <td class="right">${fmtCurrency(r.lckjShare)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+
+async function loadGoogleSheet() {
+
+  const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRzqTtBYj59-XseXaVtsAhr5JYZsw9fiWmKFRl8pLlMvDUvnAWrHCJWb85oRtt-GeBgaSi8KNIS9olx/pub?output=csv";
+
+  try {
+    const response = await fetch(csvUrl + "&t=" + Date.now());
+    const csvText = await response.text();
+
+    parseCsv(csvText);
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+
+    populateGameFilter();
+    renderSummary();
+    renderBuyTable();
+    renderSellTable();
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('emptyState').innerHTML =
+      'Failed to load Google Sheets data.';
+  }
+}
+
+window.addEventListener('load', () => {
+  loadGoogleSheet();
+  setInterval(loadGoogleSheet, 60000);
+});
+
+
+// Upload functionality retained but no longer required
+document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    parseCsv(evt.target.result);
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+    populateGameFilter();
+    renderSummary();
+    renderBuyTable();
+    renderSellTable();
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('searchBoxBuy').addEventListener('input', renderBuyTable);
+document.getElementById('gameFilter').addEventListener('change', renderBuyTable);
+document.getElementById('searchBoxSell').addEventListener('input', renderSellTable);
+
+document.querySelectorAll('th[data-table]').forEach(th => {
+  th.addEventListener('click', function() {
+    const key = th.getAttribute('data-key');
+    const table = th.getAttribute('data-table');
+    const sk = sortState[table];
+    if (sk.key === key) { sk.asc = !sk.asc; } else { sk.key = key; sk.asc = true; }
+    if (table === 'buy') renderBuyTable(); else renderSellTable();
+  });
+});
+</script>
+</body>
+</html>
