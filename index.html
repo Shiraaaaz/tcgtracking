@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCG Capital Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:20px}
+.container{max-width:1200px;margin:auto}
+h1{text-align:center}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin:20px 0}
+.card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.label{font-size:13px;color:#666}.value{font-size:26px;font-weight:bold;margin-top:8px}
+table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+th,td{padding:10px;border:1px solid #ddd;text-align:center}
+th{background:#2e7d32;color:#fff}
+.green{color:green}.red{color:red}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>TCG Capital Tracker</h1>
+<div class="cards">
+<div class="card"><div class="label">Initial Capital</div><div class="value" id="initial">-</div></div>
+<div class="card"><div class="label">Capital Used</div><div class="value" id="used">-</div></div>
+<div class="card"><div class="label">Capital Left</div><div class="value" id="left">-</div></div>
+<div class="card"><div class="label">Total Profit</div><div class="value" id="profit">-</div></div>
+<div class="card"><div class="label">Profit Margin %</div><div class="value" id="margin">-</div></div>
+<div class="card"><div class="label">Total Profits</div><div class="value" id="profits">-</div></div>
+</div>
+
+<table>
+<thead><tr>
+<th>Game</th><th>Item/Card</th><th>Quantity</th><th>Cost</th><th>Sold For</th><th>Profit</th><th>Profit Margin</th><th>Remarks</th>
+</tr></thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+
+<script>
+const url="https://docs.google.com/spreadsheets/d/e/2PACX-1vQoDO77WEWEFUMKyDhZkAzwEVSWqC7UXq0DY2nK3Vy0ibvXrxZUt6KccOoF3eF46izMrHEG5P5E88Q0/pub?output=csv";
+Papa.parse(url,{
+download:true,header:true,
+complete:(r)=>{
+let init=0,used=0,totalProfit=0,marginTotal=0,count=0;
+const body=document.getElementById("rows");
+r.data.forEach(x=>{
+if(!x["Item/Card"]) return;
+const cost=Number(String(x["Cost"]||0).replace(/,/g,''))||0;
+const sold=Number(String((x["Sold for how much"]||x["Sold for how mu"]||0)).replace(/,/g,''))||0;
+const profit=sold-cost;
+const margin=cost?profit/cost*100:0;
+if(!init)init=Number(String(x["Initial Capital"]||0).replace(/,/g,''))||0;
+used+=cost;
+if(sold){totalProfit+=profit;marginTotal+=margin;count++;}
+body.innerHTML+=`<tr>
+<td>${x["Game"]||""}</td>
+<td>${x["Item/Card"]||""}</td>
+<td>${x["Quantity"]||""}</td>
+<td>$${cost.toLocaleString()}</td>
+<td>${sold?"$"+sold.toLocaleString():"-"}</td>
+<td class="${profit>=0?"green":"red"}">${sold?("$"+profit.toLocaleString()):"-"}</td>
+<td>${sold?margin.toFixed(2)+"%":"-"}</td>
+<td>${x["Remarks"]||""}</td>
+</tr>`;
+});
+document.getElementById("initial").textContent="$"+init.toLocaleString();
+document.getElementById("used").textContent="$"+used.toLocaleString();
+document.getElementById("left").textContent="$"+(init-used).toLocaleString();
+document.getElementById("profit").textContent="$"+totalProfit.toLocaleString();
+document.getElementById("profits").textContent="$"+totalProfit.toLocaleString();
+document.getElementById("margin").textContent=(count?marginTotal/count:0).toFixed(2)+"%";
+}
+});
+</script>
+</body>
+</html>
