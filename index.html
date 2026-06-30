@@ -1,666 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TCG Capital Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
-:root {
-  --bg:        #ffffff;
-  --surface:   #f8fafb;
-  --surface2:  #eff2f5;
-  --surface3:  #e6ecf1;
-  --border:    #d0dce8;
-  --border2:   #c0cfe0;
-  --gold:      #b8860b;
-  --gold-dim:  #8a6408;
-  --teal:      #2d8659;
-  --teal-dim:  #1f5c3f;
-  --crimson:   #c73e3e;
-  --crimson-dim:#8a2a2a;
-  --slate:     #556b82;
-  --text:      #1a2332;
-  --text-dim:  #7a8a9a;
-  --r:         8px;
-  --font-disp: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'Inter', sans-serif;
-  --topbar-h:  64px;
-}
-*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  min-height: 100vh;
-  padding-bottom: 40px;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-/* ─── TOPBAR ─── */
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 200;
-  gap: 10px;
-}
-.topbar-brand { display:flex; align-items:center; gap:10px; }
-.brand-icon {
-  width:36px; height:36px; border-radius:6px;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  display:flex; align-items:center; justify-content:center; font-size:18px;
-  flex-shrink: 0;
-}
-.brand-name { font-family:var(--font-disp); font-size:16px; font-weight:600; letter-spacing:0px; }
-.brand-sub  { font-size:12px; color:var(--text-dim); margin-top:2px; }
-.topbar-right { display:flex; align-items:center; gap:12px; }
-.sync-btn {
-  display:flex; align-items:center; gap:6px;
-  background: var(--surface2); border:1px solid var(--border2);
-  color: var(--text); font-family:var(--font-body); font-size:13px; font-weight:500;
-  padding:8px 14px; border-radius:6px; cursor:pointer; transition:all .2s;
-  white-space: nowrap;
-}
-.sync-btn:hover { border-color:var(--slate); color:var(--slate); }
-.sync-btn:active { transform: scale(.97); }
-.sync-dot { width:6px; height:6px; border-radius:50%; background:var(--text-dim); flex-shrink:0; transition:background .3s; }
-.sync-dot.live { background:var(--teal); box-shadow:0 0 6px var(--teal); animation: pulse 2s infinite; }
-.sync-dot.busy { background: var(--gold); animation: spin-pulse .8s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-@keyframes spin-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-.last-sync { font-size:12px; color:var(--text-dim); white-space:nowrap; }
-
-/* ─── SKELETON LOADER (shown while first sync happens) ─── */
-.skeleton-overlay {
-  position:relative;
-}
-.skel {
-  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 37%, var(--surface2) 63%);
-  background-size: 400% 100%;
-  animation: skel-shine 1.4s ease infinite;
-  border-radius: 6px;
-}
-@keyframes skel-shine {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.error-msg {
-  margin:12px 24px 0;
-  background:rgba(199,62,62,.08); border:1px solid rgba(199,62,62,.2);
-  border-radius:6px; padding:12px 14px;
-  color:var(--crimson); font-size:12px; display:none;
-}
-
-/* ─── HERO ─── */
-.hero {
-  margin: 16px 24px 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 20px 22px;
-  position:relative; overflow:hidden;
-}
-.hero-title { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-dim); margin-bottom:16px; font-weight:600; }
-.hero-nums {
-  display:grid; grid-template-columns:repeat(3,1fr);
-  gap:0; border:1px solid var(--border2); border-radius:8px; overflow:hidden;
-}
-.hero-num {
-  padding: 16px 14px;
-  border-right: 1px solid var(--border2);
-  position:relative;
-  background: var(--bg);
-}
-.hero-num:last-child { border-right:none; }
-.hn-label { font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-dim); margin-bottom:6px; font-weight:600; }
-.hn-value {
-  font-family:var(--font-body); font-size:24px; font-weight:700; line-height:1.2;
-  letter-spacing:-0.3px;
-}
-.hn-value.gold    { color:var(--gold); }
-.hn-value.crimson { color:var(--crimson); }
-.hn-value.teal    { color:var(--teal); }
-.hn-sub { font-size:11px; color:var(--text-dim); margin-top:4px; }
-
-/* ─── BURN BAR ─── */
-.burn-bar-section { margin:16px 24px 0; }
-.burn-bar-labels {
-  display:flex; justify-content:space-between;
-  font-size:12px; color:var(--text); margin-bottom:8px;
-  font-weight: 500;
-}
-.burn-bar-track {
-  height:10px; background:var(--surface2); border-radius:99px; overflow:hidden;
-  position:relative;
-}
-.burn-bar-fill {
-  height:100%; border-radius:99px;
-  background:linear-gradient(90deg,var(--gold) 0%,var(--crimson) 100%);
-  transition:width .8s cubic-bezier(.4,0,.2,1);
-  width:0%;
-}
-.burn-bar-sub {
-  display:flex; justify-content:space-between;
-  font-size:11px; color:var(--text-dim); margin-top:6px;
-}
-
-/* ─── CHARTS ─── */
-.charts-row {
-  display:grid; grid-template-columns:1fr 1.4fr;
-  gap:16px; margin:16px 24px 0;
-}
-.chart-card {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--r); padding:16px;
-}
-.chart-card h3 {
-  font-size:12px; text-transform:uppercase; letter-spacing:0.4px;
-  color:var(--text); margin-bottom:12px; font-weight:600;
-}
-.chart-center { display:flex; justify-content:center; }
-
-/* ─── SECTION DIVIDER ─── */
-.sec-divider {
-  margin:20px 24px 0;
-  display:flex; align-items:center; gap:10px;
-  font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-dim);
-  font-weight: 600;
-}
-.sec-divider::after { content:''; flex:1; height:1px; background:var(--border); }
-
-/* ─── TABLE ─── */
-.table-wrap-outer {
-  margin:12px 24px 0;
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--r);
-  overflow:hidden;
-}
-/* IMPORTANT: table header is NOT sticky relative to viewport anymore.
-   It was overlapping rows because its sticky `top` offset didn't match
-   the real topbar height on every screen size. Instead we make the
-   *scroll container* itself the sticky context with a fixed max-height,
-   so the header sticks only within its own table, never over body rows. */
-.table-scroll {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 520px;
-  position: relative;
-}
-table { width:100%; border-collapse:collapse; font-size:13px; }
-thead { position: sticky; top: 0; z-index: 5; }
-thead tr { background: var(--surface2); }
-thead th {
-  padding:10px 12px; text-align:left;
-  font-size:11px; text-transform:uppercase; letter-spacing:0.3px;
-  color:var(--text-dim); font-weight:600; white-space:nowrap;
-  border-bottom:1px solid var(--border2);
-  background: var(--surface2);
-  box-shadow: 0 1px 0 var(--border2);
-}
-tbody tr { border-bottom:1px solid var(--border); transition:background .15s; background: var(--bg); }
-tbody tr:last-child { border-bottom:none; }
-tbody tr:hover { background:rgba(184,134,11,.03); }
-tbody td { padding:12px 12px; vertical-align:middle; }
-
-.tag {
-  display:inline-block; font-size:11px; font-weight:600;
-  padding:3px 8px; border-radius:4px; letter-spacing:.1px; white-space:nowrap;
-}
-.tag-game    { background:rgba(184,134,11,.12); color:var(--gold); }
-.tag-pending { background:rgba(85,107,130,.12); color:var(--slate); }
-.tag-profit  { background:rgba(45,134,89,.12); color:var(--teal); }
-.tag-loss    { background:rgba(199,62,62,.12); color:var(--crimson); }
-.tag-even    { background:rgba(85,107,130,.12); color:var(--slate); }
-
-.mono { font-family:var(--font-mono); font-size:12px; font-weight:500; }
-.val-profit { color:var(--teal); font-weight:600; }
-.val-loss   { color:var(--crimson); font-weight:600; }
-.val-neu    { color:var(--slate); }
-.remarks-cell { font-size:12px; color:var(--text-dim); max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.updates-cell { font-size:12px; color:var(--text-dim); max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* ─── EMPTY / ERROR ─── */
-.empty { text-align:center; padding:48px 20px; color:var(--text-dim); }
-.empty-icon { font-size:36px; margin-bottom:12px; }
-.empty h4 { font-size:15px; color:var(--text); margin-bottom:6px; font-weight:600; }
-.empty p { font-size:13px; }
-
-/* ─── FOOTER ─── */
-footer {
-  margin:28px 24px 0;
-  padding-top:14px; border-top:1px solid var(--border);
-  font-size:12px; color:var(--text-dim);
-  display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;
-}
-
-/* ─── RESPONSIVE ─── */
-@media(max-width:1024px){
-  .charts-row { grid-template-columns:1fr; }
-}
-
-@media(max-width:768px){
-  .hero-nums { grid-template-columns:1fr; }
-  .hero-num  { border-right:none; border-bottom:1px solid var(--border2); }
-  .hero-num:last-child { border-bottom:none; }
-  .charts-row { grid-template-columns:1fr; }
-
-  .topbar { padding:12px 16px; }
-  .hero { margin:12px 16px 0; padding:16px 14px; }
-  .burn-bar-section { margin:12px 16px 0; }
-  .charts-row { margin:12px 16px 0; gap:12px; }
-  .sec-divider { margin:16px 16px 0; }
-  .table-wrap-outer { margin:8px 16px 0; }
-  .table-scroll { max-height: 420px; }
-  footer { margin:24px 16px 0; }
-
-  .brand-name { font-size:15px; }
-  .brand-sub { font-size:11px; }
-  .sync-btn { font-size:12px; padding:7px 12px; }
-  .last-sync { font-size:11px; }
-
-  .hn-value { font-size:22px; }
-  .hn-label { font-size:10px; }
-  .hn-sub { font-size:10px; }
-
-  .chart-card h3 { font-size:11px; margin-bottom:10px; }
-
-  thead th { padding:8px 10px; font-size:10px; }
-  tbody td { padding:10px 10px; font-size:12px; }
-  .mono { font-size:11px; }
-  .tag { font-size:10px; padding:2px 6px; }
-}
-
-@media(max-width:480px){
-  .topbar { flex-direction: row; gap:8px; padding:10px 14px; }
-  .last-sync { display: none; }
-
-  .hero { margin:8px 14px 0; padding:14px 12px; }
-  .hero-nums { grid-template-columns: 1fr; }
-  .hero-num { padding: 12px 10px; }
-
-  .hn-value { font-size:20px; }
-  .hn-label { font-size:10px; }
-  .hn-sub { font-size:10px; }
-
-  .burn-bar-section { margin:8px 14px 0; }
-  .charts-row { margin:8px 14px 0; gap:8px; }
-  .chart-card { padding:12px; }
-
-  .sec-divider { margin:14px 14px 0; font-size:10px; }
-  .table-wrap-outer { margin:6px 14px 0; }
-  .table-scroll { max-height: 360px; }
-
-  thead th { padding:8px 8px; font-size:10px; }
-  tbody td { padding:8px 8px; font-size:11px; }
-  .mono { font-size:11px; }
-  .tag { font-size:9px; padding:2px 5px; }
-  .remarks-cell { max-width:100px; font-size:11px; }
-  .updates-cell { max-width:90px; font-size:11px; }
-
-  footer { margin:20px 14px 0; font-size:11px; }
-}
+body{font-family:Arial,sans-serif;background:#f4f4f4;margin:20px}
+h1{text-align:center}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin-bottom:20px}
+.card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.card h3{margin:0;font-size:14px;color:#666}
+.card p{margin:8px 0 0;font-size:26px;font-weight:bold}
+table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+th,td{padding:10px;border:1px solid #ddd;text-align:center}
+th{background:#2e7d32;color:#fff}
+.pos{color:green;font-weight:bold}.neg{color:red;font-weight:bold}
 </style>
 </head>
 <body>
+<h1>TCG Capital Tracker</h1>
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="brand-icon">🃏</div>
-    <div>
-      <div class="brand-name">TCG Tracker</div>
-      <div class="brand-sub">SGD · Live</div>
-    </div>
-  </div>
-  <div class="topbar-right">
-    <div class="last-sync" id="lastSync">Loading…</div>
-    <button class="sync-btn" onclick="fetchSheet(true)">
-      <span class="sync-dot busy" id="syncDot"></span>
-      <span id="syncLabel">Sync</span>
-    </button>
-  </div>
+<div class="cards">
+<div class="card"><h3>Initial Capital</h3><p id="initial">$0</p></div>
+<div class="card"><h3>Capital Used</h3><p id="used">$0</p></div>
+<div class="card"><h3>Capital Left</h3><p id="left">$0</p></div>
+<div class="card"><h3>Total Profit</h3><p id="profit">$0</p></div>
+<div class="card"><h3>Profit Margin %</h3><p id="margin">0%</p></div>
+<div class="card"><h3>Total Profits</h3><p id="profits">$0</p></div>
 </div>
 
-<div class="error-msg" id="errorMsg"></div>
-
-<!-- HERO NUMBERS -->
-<div class="hero">
-  <div class="hero-title">Capital Overview</div>
-  <div class="hero-nums">
-    <div class="hero-num">
-      <div class="hn-label">Initial Capital</div>
-      <div class="hn-value gold skel" id="h-initial">&nbsp;</div>
-      <div class="hn-sub">Total invested</div>
-    </div>
-    <div class="hero-num">
-      <div class="hn-label">Capital Used</div>
-      <div class="hn-value crimson skel" id="h-used">&nbsp;</div>
-      <div class="hn-sub" id="h-used-pct">— of initial</div>
-    </div>
-    <div class="hero-num">
-      <div class="hn-label">Capital Left</div>
-      <div class="hn-value teal skel" id="h-left">&nbsp;</div>
-      <div class="hn-sub" id="h-left-pct">Remaining</div>
-    </div>
-  </div>
-</div>
-
-<!-- BURN BAR -->
-<div class="burn-bar-section">
-  <div class="burn-bar-labels">
-    <span>Capital burn rate</span>
-    <span id="burnPct">—%</span>
-  </div>
-  <div class="burn-bar-track">
-    <div class="burn-bar-fill" id="burnFill"></div>
-  </div>
-  <div class="burn-bar-sub">
-    <span>S$0</span>
-    <span id="burnMid"></span>
-    <span id="burnMax"></span>
-  </div>
-</div>
-
-<!-- CHARTS -->
-<div class="charts-row">
-  <div class="chart-card">
-    <h3>💰 Capital Allocation</h3>
-    <div class="chart-center"><canvas id="allocChart" width="140" height="140"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <h3>📈 Profit / Loss per Item</h3>
-    <canvas id="plChart" height="140"></canvas>
-  </div>
-</div>
-
-<!-- TABLE -->
-<div class="sec-divider">Item Ledger</div>
-<div class="table-wrap-outer">
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Game</th>
-          <th>Item / Card</th>
-          <th>Qty</th>
-          <th>Total Cost</th>
-          <th>Profit / P&amp;L</th>
-          <th>Margin %</th>
-          <th>Status</th>
-          <th>Remarks</th>
-          <th>Updates</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        <tr><td colspan="9">
-          <div class="empty">
-            <div class="empty-icon">🃏</div>
-            <h4>Loading data…</h4>
-            <p>Pulling the latest sheet</p>
-          </div>
-        </td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<footer>
-  <span>🃏 TCG Capital Tracker — SGD</span>
-  <span id="rowCount">0 items tracked</span>
-</footer>
+<table>
+<thead><tr>
+<th>Game</th><th>Item/Card</th><th>Quantity</th><th>Cost</th><th>Sold For</th><th>Profit</th><th>Profit Margin %</th>
+</tr></thead>
+<tbody id="tbody"></tbody>
+</table>
 
 <script>
-/* ─────────────────────────────────────────────────────────
-   SHEET SOURCE — hardcoded so it loads instantly for everyone,
-   no manual pasting, no waiting on first load.
-   ───────────────────────────────────────────────────────── */
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQoDO77WEWEFUMKyDhZkAzwEVSWqC7UXq0DY2nK3Vy0ibvXrxZUt6KccOoF3eF46izMrHEG5P5E88Q0/pub?output=csv";
-
-/* Fast direct fetch first (Google publishes CSV with permissive CORS
-   headers, so this works without a proxy in almost all cases — this
-   is what was slowing mobile syncs down before, since it always
-   waited on a slow third-party proxy first). Proxy is now only a
-   fallback if the direct fetch fails. A cache-busting param ensures
-   mobile browsers/CDNs don't serve a stale cached copy. */
-function buildDirectUrl() {
-  return SHEET_CSV_URL + (SHEET_CSV_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+const csv="https://docs.google.com/spreadsheets/d/e/2PACX-1vQoDO77WEWEFUMKyDhZkAzwEVSWqC7UXq0DY2nK3Vy0ibvXrxZUt6KccOoF3eF46izMrHEG5P5E88Q0/pub?output=csv";
+Papa.parse(csv,{
+download:true,header:true,
+complete:r=>{
+let rows=r.data.filter(x=>Object.values(x).some(v=>v));
+let init=0,used=0,totalProfit=0,totalMargin=0,count=0;
+const tb=document.getElementById("tbody");
+rows.forEach(x=>{
+let cost=parseFloat((x["Cost"]||"0").replace(/,/g,""))||0;
+let sold=parseFloat((x["Sold for how much"]||x["Sold for how mu"]||"0").replace(/,/g,""))||0;
+let initial=parseFloat((x["Initial Capital"]||"0").replace(/,/g,""))||0;
+if(initial>0&&init===0)init=initial;
+used+=cost;
+let profit=sold-cost;
+let margin=cost?profit/cost*100:0;
+if(sold>0){totalProfit+=profit;totalMargin+=margin;count++;}
+tb.innerHTML+=`<tr>
+<td>${x["Game"]||""}</td>
+<td>${x["Item/Card"]||""}</td>
+<td>${x["Quantity"]||""}</td>
+<td>$${cost.toLocaleString()}</td>
+<td>${sold?("$"+sold.toLocaleString()):"-"}</td>
+<td class="${profit>=0?"pos":"neg"}">${sold?("$"+profit.toLocaleString()):"-"}</td>
+<td>${sold?margin.toFixed(2)+"%":"-"}</td>
+</tr>`;
+});
+document.getElementById("initial").textContent="$"+init.toLocaleString();
+document.getElementById("used").textContent="$"+used.toLocaleString();
+document.getElementById("left").textContent="$"+(init-used).toLocaleString();
+document.getElementById("profit").textContent="$"+totalProfit.toLocaleString();
+document.getElementById("profits").textContent="$"+totalProfit.toLocaleString();
+document.getElementById("margin").textContent=(count?totalMargin/count:0).toFixed(2)+"%";
 }
-function buildProxyUrl() {
-  return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(buildDirectUrl());
-}
-
-let allocChart = null, plChart = null;
-
-const S = v => (v == null || isNaN(v)) ? '—' : 'S$' + Number(v).toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2});
-const Pct = v => (v == null || isNaN(v)) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
-
-function col(row, ...names) {
-  const keys = Object.keys(row);
-  for (const n of names) {
-    const found = keys.find(k => k.trim().toLowerCase().replace(/[^a-z0-9]/g,'').includes(n.toLowerCase().replace(/[^a-z0-9]/g,'')));
-    if (found !== undefined) return row[found];
-  }
-  return null;
-}
-
-/* ── FETCH SHEET (fast path + fallback) ── */
-function fetchSheet(isManual) {
-  setSyncing(true);
-  hideError();
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 6000);
-
-  fetch(buildDirectUrl(), { signal: controller.signal, cache: 'no-store' })
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-    .then(csv => {
-      clearTimeout(timeout);
-      parseAndRender(csv);
-    })
-    .catch(() => {
-      // Fallback to proxy if direct fetch is blocked by CORS or times out
-      fetch(buildProxyUrl())
-        .then(r => r.text())
-        .then(csv => parseAndRender(csv))
-        .catch(() => {
-          showError('Could not reach the sheet. Check your internet connection and try again.');
-          setSyncing(false);
-        });
-    });
-}
-
-function parseAndRender(csv) {
-  if (!csv || csv.trim().length === 0) {
-    showError('Sheet returned no data.');
-    setSyncing(false);
-    return;
-  }
-  Papa.parse(csv, {
-    header: true, skipEmptyLines: true, dynamicTyping: true,
-    complete: res => {
-      if (!res.data || res.data.length === 0) {
-        showError('Sheet loaded but no rows found.');
-        setSyncing(false);
-        return;
-      }
-      render(res.data);
-      setSyncing(false, true);
-    },
-    error: e => { showError('CSV parse error: ' + e.message); setSyncing(false); }
-  });
-}
-
-function setSyncing(active, success) {
-  const dot   = document.getElementById('syncDot');
-  const label = document.getElementById('syncLabel');
-  if (active) { dot.className='sync-dot busy'; label.textContent='Syncing…'; }
-  else if (success) {
-    dot.className='sync-dot live';
-    label.textContent='Sync';
-    document.getElementById('lastSync').textContent = 'Synced ' + new Date().toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit'});
-  } else {
-    dot.className='sync-dot';
-    label.textContent='Retry';
-  }
-}
-function showError(msg) { const el=document.getElementById('errorMsg'); el.style.display='block'; el.textContent='⚠️ '+msg; }
-function hideError()    { document.getElementById('errorMsg').style.display='none'; }
-
-/* ── RENDER ── */
-function render(rows) {
-  const getNum = (r, ...names) => { const v = col(r, ...names); return (v == null || v === '') ? null : Number(v); };
-
-  /* Initial Capital / Capital Used / Capital Left are ONE running
-     account-wide total — they live in a single summary row (or are
-     repeated/blank elsewhere), NOT a per-item value to sum.
-     We take the LAST non-empty value found, since that reflects
-     the most recent/up-to-date balance as the sheet is updated. */
-  let initialCapital = null, totalCapUsed = null, totalCapLeft = null;
-  rows.forEach(r => {
-    const ic = getNum(r,'InitialCapital','Initial Capital','InitialFund');
-    const cu = getNum(r,'CapitalUsed','Capital Used','CapUsed');
-    const cl = getNum(r,'CapitalLeft','Capital Left','CapLeft','Remaining');
-    if (ic != null) initialCapital = ic;
-    if (cu != null) totalCapUsed   = cu;
-    if (cl != null) totalCapLeft   = cl;
-  });
-
-  if (initialCapital == null) initialCapital = (totalCapUsed || 0) + (totalCapLeft || 0);
-  if (totalCapUsed == null)   totalCapUsed   = initialCapital - (totalCapLeft || 0);
-  if (totalCapLeft == null)   totalCapLeft   = initialCapital - (totalCapUsed || 0);
-
-  const burnPct = initialCapital ? Math.min(Math.max((totalCapUsed / initialCapital) * 100, 0), 100) : 0;
-
-  const setVal = (id, val) => { const el = document.getElementById(id); el.textContent = val; el.classList.remove('skel'); };
-  setVal('h-initial', S(initialCapital));
-  setVal('h-used',    S(totalCapUsed));
-  setVal('h-left',    S(totalCapLeft));
-  document.getElementById('h-used-pct').textContent = burnPct.toFixed(1) + '% of initial';
-  const leftPct = initialCapital ? ((1 - totalCapUsed/initialCapital)*100).toFixed(1) : '—';
-  document.getElementById('h-left-pct').textContent = leftPct + '% remaining';
-
-  document.getElementById('burnPct').textContent  = burnPct.toFixed(1) + '%';
-  document.getElementById('burnFill').style.width = burnPct + '%';
-  document.getElementById('burnMax').textContent  = S(initialCapital);
-  document.getElementById('burnMid').textContent  = S(initialCapital / 2);
-
-  if (allocChart) allocChart.destroy();
-  if (plChart)    plChart.destroy();
-
-  allocChart = new Chart(document.getElementById('allocChart'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Capital Used','Capital Left'],
-      datasets: [{
-        data: [Math.max(totalCapUsed,0), Math.max(totalCapLeft,0)],
-        backgroundColor: ['rgba(199,62,62,.7)','rgba(45,134,89,.7)'],
-        borderColor:     ['#c73e3e','#2d8659'],
-        borderWidth: 1, hoverOffset: 4
-      }]
-    },
-    options: {
-      cutout: '70%',
-      plugins: { legend: { labels: { color:'#556b82', font:{family:'Inter',size:11}, boxWidth:10 } } }
-    }
-  });
-
-  // Only plot rows that represent actual items (have an Item/Card name)
-  const itemRows = rows.filter(r => col(r,'Item/Card','Item','Card','Name'));
-  const plLabels = itemRows.map(r => (col(r,'Item/Card','Item','Card','Name') || '?').toString().substring(0,14));
-  const plVals   = itemRows.map(r => getNum(r,'Profit','PL','P&L','P/L','ProfitLoss') || 0);
-  const plColors = plVals.map(v => v > 0 ? 'rgba(45,134,89,.7)' : v < 0 ? 'rgba(199,62,62,.7)' : 'rgba(85,107,130,.4)');
-  const plBorder = plVals.map(v => v > 0 ? '#2d8659' : v < 0 ? '#c73e3e' : '#556b82');
-
-  plChart = new Chart(document.getElementById('plChart'), {
-    type: 'bar',
-    data: {
-      labels: plLabels,
-      datasets: [{
-        label: 'Profit / Loss (SGD)',
-        data: plVals,
-        backgroundColor: plColors,
-        borderColor: plBorder,
-        borderWidth: 1,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display:false } },
-      scales: {
-        x: { ticks:{color:'#556b82', font:{size:11}}, grid:{color:'rgba(0,0,0,0.02)'} },
-        y: { ticks:{color:'#556b82', callback: v=>'S$'+v.toLocaleString(), font:{size:11}}, grid:{color:'rgba(0,0,0,0.04)'} }
-      }
-    }
-  });
-
-  /* ── TABLE — only render rows that are actual inventory items ── */
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
-
-  if (itemRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">🃏</div><h4>No items yet</h4><p>Add a row with an Item/Card name in the sheet</p></div></td></tr>`;
-  }
-
-  itemRows.forEach(r => {
-    const game     = col(r,'Game') || '—';
-    const item     = col(r,'Item/Card','Item','Card','Name') || '—';
-    const qty      = col(r,'Quantity','Qty') ?? '—';
-    const cost     = getNum(r,'TotalCost','Total Cost','Cost');
-    const pl       = getNum(r,'Profit','PL','P&L','P/L','ProfitLoss','Profit/Loss');
-    const remarks  = col(r,'Remarks') || '';
-    const updates  = col(r,'Updates') || '';
-
-    const margin   = (pl != null && cost) ? (pl / cost * 100) : null;
-    const plCls    = pl == null ? 'val-neu' : pl > 0 ? 'val-profit' : pl < 0 ? 'val-loss' : 'val-neu';
-    const mCls     = margin == null ? 'val-neu' : margin > 0 ? 'val-profit' : margin < 0 ? 'val-loss' : 'val-neu';
-
-    let statusTag;
-    if (pl == null)    statusTag = `<span class="tag tag-pending">⏳ Pending</span>`;
-    else if (pl > 0)   statusTag = `<span class="tag tag-profit">✅ Profit</span>`;
-    else if (pl < 0)   statusTag = `<span class="tag tag-loss">❌ Loss</span>`;
-    else               statusTag = `<span class="tag tag-even">⚖️ Even</span>`;
-
-    const gameTag  = game !== '—' ? `<span class="tag tag-game">${game}</span>` : '<span style="color:var(--text-dim)">—</span>';
-
-    tbody.innerHTML += `
-      <tr>
-        <td>${gameTag}</td>
-        <td style="font-weight:500;min-width:100px">${item}</td>
-        <td class="mono">${qty}</td>
-        <td class="mono">${S(cost)}</td>
-        <td class="${plCls}">${pl != null ? S(pl) : '<span style="color:var(--text-dim)">—</span>'}</td>
-        <td class="${mCls}">${margin != null ? Pct(margin) : '<span style="color:var(--text-dim)">—</span>'}</td>
-        <td>${statusTag}</td>
-        <td class="remarks-cell" title="${remarks}">${remarks || '<span style="color:var(--text-dim)">—</span>'}</td>
-        <td class="updates-cell" title="${updates}">${updates || '<span style="color:var(--text-dim)">—</span>'}</td>
-      </tr>`;
-  });
-
-  document.getElementById('rowCount').textContent = itemRows.length + ' item' + (itemRows.length !== 1 ? 's' : '') + ' tracked';
-}
-
-/* ── AUTO-LOAD on page open — instant, no manual step ── */
-window.addEventListener('DOMContentLoaded', () => fetchSheet(false));
-
-/* ── Auto-refresh every 60s while page stays open ── */
-setInterval(() => fetchSheet(false), 60000);
-
-/* ── Refresh when tab becomes visible again (e.g. switching back on mobile) ── */
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') fetchSheet(false);
 });
 </script>
 </body>
